@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
+import { API_ENDPOINT } from '../config/endpoints';
 
 interface WebSocketContextType {
   socket: Socket | null;
@@ -43,7 +44,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     setSessionId(newSessionId);
 
     // Connect to the WebSocket server
-    const socketInstance = io('http://localhost:8000', {
+    const socketInstance = io(API_ENDPOINT, { 
       transports: ['websocket'],
       auth: { session_id: newSessionId },
       reconnection: true,

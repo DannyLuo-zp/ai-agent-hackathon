@@ -9,10 +9,16 @@ from chat_session import ChatSession
 # Create FastAPI app
 app = FastAPI()
 
+# Define allowed origins
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Local development
+    "https://*.azurecontainerapps.io",  # Azure Container Apps domain
+]
+
 # Create Socket.IO server
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=["http://localhost:3000"],  # Allow frontend origin
+    cors_allowed_origins=ALLOWED_ORIGINS,  # Allow both local and production origins
     logger=True,
     engineio_logger=True
 )
@@ -23,7 +29,7 @@ socket_app = socketio.ASGIApp(sio, app)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allow frontend origin
+    allow_origins=ALLOWED_ORIGINS,  # Allow both local and production origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
