@@ -45,3 +45,26 @@ python main.py
 - `main.py` - FastAPI application and WebSocket endpoints
 - `session_manager.py` - Manages WebSocket connections and chat sessions
 - `chat_session.py` - Handles message processing and OpenAI API communication 
+
+## Continuous Deployment
+
+The backend is configured for continuous deployment to Azure Container Apps using GitHub Actions.
+
+### Deployment Process
+
+1. When changes are pushed to the `main` branch, the GitHub workflow automatically:
+   - Builds a Docker container from the Dockerfile
+   - Pushes the container to Azure Container Registry
+   - Deploys the container to Azure Container Apps
+
+2. Required GitHub Secrets:
+   - `AZURE_CLIENT_ID` - Azure service principal client ID
+   - `AZURE_CLIENT_SECRET` - Azure service principal client secret
+   - `AZURE_TENANT_ID` - Azure tenant ID
+   - `AZURE_SUBSCRIPTION_ID` - Azure subscription ID
+   - `REGISTRY_ENDPOINT` - Azure Container Registry endpoint
+   - `REGISTRY_USERNAME` - ACR username
+   - `REGISTRY_PASSWORD` - ACR password
+   - `AZURE_RESOURCE_GROUP` - Resource group name
+   - `AZURE_CONTAINER_APP_ENV` - Container Apps environment name
+   - `OPENAI_API_KEY` - OpenAI API key
