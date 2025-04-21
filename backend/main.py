@@ -12,7 +12,8 @@ app = FastAPI()
 # Define allowed origins
 ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Local development
-    "https://*.azurecontainerapps.io",  # Azure Container Apps domain
+    "https://ai-agent-hackathon-frontend.redbeach-bcf4c30d.westus2.azurecontainerapps.io",  # Production frontend
+    "https://*.azurecontainerapps.io",  # Any Azure Container Apps domain
 ]
 
 # Create Socket.IO server
