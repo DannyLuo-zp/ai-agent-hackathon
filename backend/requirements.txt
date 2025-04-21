@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+websockets
+python-dotenv
+openai
+pydantic
+python-multipart
+python-socketio
+aiohttp
