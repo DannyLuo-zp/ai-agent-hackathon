@@ -1,0 +1,64 @@
+name: Build and deploy AI Agent Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ROOT_NAME: ai-agent-hackathon
+
+jobs:
+  build-and-deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create tag
+        run: |
+          echo "TAG=v$(date +%Y%m%d.%H%M%S)" >> "$GITHUB_ENV"
+          echo "Using tag: ${TAG}"
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_ENDPOINT }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push container
+        run: |
+          cd backend
+          docker build . -t ${{ secrets.REGISTRY_ENDPOINT }}/$ROOT_NAME-backend:latest --build-arg GIT_VERSION_TAG=${TAG}
+          docker push ${{ secrets.REGISTRY_ENDPOINT }}/$ROOT_NAME-backend:latest
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp up --name $ROOT_NAME-backend \
+                              --image ${{ secrets.REGISTRY_ENDPOINT }}/$ROOT_NAME-backend:latest \
+                              --ingress external \
+                              --target-port 8000 \
+                              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+                              --registry-server ${{ secrets.REGISTRY_ENDPOINT }} \
+                              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
+                              --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
+                              --environment ${{ secrets.AZURE_CONTAINER_APP_ENV }} \
+                              --env-vars "APP_VERSION=${TAG}" \
+                                "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Logout
+        run: |
+          az logout 
