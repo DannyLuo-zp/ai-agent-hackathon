@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import Message from './Message';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 const ChatInterface: React.FC = () => {
   const { sendMessage, messages, isConnected } = useWebSocket();
@@ -37,7 +38,7 @@ const ChatInterface: React.FC = () => {
         className="bg-white/80 backdrop-blur-sm shadow-sm p-4 sticky top-0 z-10"
       >
         <div className="flex items-center justify-center space-x-2">
-          <img src="/cat.png" alt="Cat" className="w-8 h-8" />
+          <Image src="/cat.png" alt="Cat" width={32} height={32} className="w-8 h-8" />
           <h1 className="text-xl font-semibold text-center bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
             Your AI Pet
           </h1>
@@ -54,8 +55,8 @@ const ChatInterface: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4"
             >
-              <img src="/cat.png" alt="Welcome" className="w-32 h-32 opacity-50" />
-              <p className="text-lg">Hi! I'm your AI pet. Let's chat! 😺</p>
+              <Image src="/cat.png" alt="Welcome" width={128} height={128} className="w-32 h-32 opacity-50" />
+              <p className="text-lg">Hi! I&apos;m your AI pet. Let&apos;s chat! 😺</p>
             </motion.div>
           ) : (
             messages.map((message) => (
@@ -80,7 +81,7 @@ const ChatInterface: React.FC = () => {
             animate={{ opacity: 1 }}
             className="flex items-center space-x-2 text-gray-500"
           >
-            <img src="/cat.png" alt="Typing" className="w-6 h-6" />
+            <Image src="/cat.png" alt="Typing" width={24} height={24} className="w-6 h-6" />
             <span className="text-sm">typing...</span>
           </motion.div>
         )}

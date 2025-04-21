@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 interface MessageProps {
   content: string;
@@ -19,9 +20,11 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp }) => {
     >
       <div className="flex items-start space-x-2 max-w-[80%]">
         {!isUser && (
-          <img 
+          <Image 
             src="/cat.png" 
             alt="Avatar" 
+            width={32}
+            height={32}
             className="w-8 h-8 rounded-full"
           />
         )}
