@@ -40,7 +40,11 @@ class ChatSession:
             response = await self.client.chat.completions.create(
                 model="gpt-4-turbo-preview",  # or your preferred model
                 messages=api_messages,
-                stream=True
+                stream=True,
+                max_tokens=150,  # Limit response length
+                temperature=0.7,  # Add some creativity but not too much
+                presence_penalty=0.6,  # Encourage diversity
+                frequency_penalty=0.3  # Reduce repetition
             )
 
             # Process streaming response
