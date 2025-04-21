@@ -41,6 +41,8 @@ jobs:
       - name: rewrite endpoint location
         run: |
           mkdir -p frontend/src/config
+          echo "// This file will be overwritten during deployment" > frontend/src/config/endpoints.ts
+          echo "// Default values for local development" >> frontend/src/config/endpoints.ts
           echo "export const API_ENDPOINT = 'https://$API_ENDPOINT';" >> frontend/src/config/endpoints.ts
 
       - name: Log in to registry
