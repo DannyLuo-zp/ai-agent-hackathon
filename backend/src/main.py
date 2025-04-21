@@ -1,10 +1,13 @@
+"""
+Main FastAPI application module.
+"""
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List
 import json
 import socketio
-from session_manager import SessionManager
-from chat_session import ChatSession
+from src.services.session_manager import SessionManager
+from src.services.chat_session import ChatSession
 
 # Create FastAPI app
 app = FastAPI()
@@ -112,4 +115,4 @@ app = socket_app
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 interface MessageProps {
   content: string;
@@ -11,20 +12,33 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp }) => {
   const isUser = sender === 'user';
   
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div 
-        className={`max-w-[80%] rounded-lg p-4 ${
-          isUser 
-            ? 'bg-blue-500 text-white rounded-br-none' 
-            : 'bg-gray-200 text-gray-800 rounded-bl-none'
-        }`}
-      >
-        <div className="text-sm mb-1">{content}</div>
-        <div className={`text-xs ${isUser ? 'text-blue-100' : 'text-gray-500'}`}>
-          {format(timestamp, 'h:mm a')}
+    <motion.div 
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <div className="flex items-start space-x-2 max-w-[80%]">
+        {!isUser && (
+          <img 
+            src="/cat.png" 
+            alt="Avatar" 
+            className="w-8 h-8 rounded-full"
+          />
+        )}
+        <div 
+          className={`rounded-2xl p-4 ${
+            isUser 
+              ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-br-none' 
+              : 'bg-white/90 backdrop-blur-sm text-gray-800 rounded-bl-none shadow-sm'
+          }`}
+        >
+          <div className="text-sm mb-1 whitespace-pre-wrap">{content}</div>
+          <div className={`text-xs ${isUser ? 'text-pink-100' : 'text-gray-500'}`}>
+            {format(timestamp, 'h:mm a')}
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

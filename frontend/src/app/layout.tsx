@@ -5,17 +5,33 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Chat Assistant",
-  description: "A ChatGPT-like interface for AI chat",
+  title: "AI Cat",
+  description: "Chat with your AI cat assistant",
+  icons: [
+    {
+      rel: 'icon',
+      url: '/cat.png',
+      type: 'image/png',
+    },
+    {
+      rel: 'apple-touch-icon',
+      url: '/cat.png',
+      type: 'image/png',
+    },
+  ],
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/cat.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/cat.png" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   );

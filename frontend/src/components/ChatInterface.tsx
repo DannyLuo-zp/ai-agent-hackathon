@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import Message from './Message';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ChatInterface: React.FC = () => {
   const { sendMessage, messages, isConnected } = useWebSocket();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -18,60 +20,101 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && isConnected) {
+      setIsTyping(true);
       sendMessage(input);
       setInput('');
+      // Simulate AI typing delay
+      setTimeout(() => setIsTyping(false), 1000);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gradient-to-b from-pink-50 to-purple-50">
       {/* Header */}
-      <header className="bg-white shadow-sm p-4">
-        <h1 className="text-xl font-semibold text-center">AI Chat Assistant</h1>
-        <div className="text-xs text-center text-gray-500">
-          {isConnected ? 'Connected' : 'Disconnected'}
+      <motion.header 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white/80 backdrop-blur-sm shadow-sm p-4 sticky top-0 z-10"
+      >
+        <div className="flex items-center justify-center space-x-2">
+          <img src="/cat.png" alt="Cat" className="w-8 h-8" />
+          <h1 className="text-xl font-semibold text-center bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
+            Your AI Pet
+          </h1>
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
         </div>
-      </header>
+      </motion.header>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            <p>Start a conversation with the AI assistant</p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <Message
-              key={message.id}
-              content={message.content}
-              sender={message.sender}
-              timestamp={message.timestamp}
-            />
-          ))
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <AnimatePresence>
+          {messages.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4"
+            >
+              <img src="/cat.png" alt="Welcome" className="w-32 h-32 opacity-50" />
+              <p className="text-lg">Hi! I'm your AI pet. Let's chat! 😺</p>
+            </motion.div>
+          ) : (
+            messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <Message
+                  content={message.content}
+                  sender={message.sender}
+                  timestamp={message.timestamp}
+                />
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+        {isTyping && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center space-x-2 text-gray-500"
+          >
+            <img src="/cat.png" alt="Typing" className="w-6 h-6" />
+            <span className="text-sm">typing...</span>
+          </motion.div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-4 bg-white border-t">
-        <div className="flex items-center">
+      <motion.form 
+        onSubmit={handleSubmit}
+        className="bg-white/80 backdrop-blur-sm p-4 border-t border-gray-200"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+      >
+        <div className="flex items-center space-x-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={!isConnected}
+            placeholder="Type a message..."
+            className="flex-1 p-3 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
           />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
-            className="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             disabled={!isConnected || !input.trim()}
+            className="p-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
-          </button>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </motion.button>
         </div>
-      </form>
+      </motion.form>
     </div>
   );
 };

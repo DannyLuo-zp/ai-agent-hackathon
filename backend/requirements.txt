@@ -7,3 +7,6 @@ pydantic
 python-multipart
 python-socketio
 aiohttp
+python-jose[cryptography]
+passlib[bcrypt]
+rich

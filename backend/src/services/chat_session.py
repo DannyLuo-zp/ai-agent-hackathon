@@ -3,6 +3,7 @@ import json
 from openai import AsyncOpenAI
 import os
 from dotenv import load_dotenv
+from src.config.settings import SYSTEM_PROMPT, INITIAL_MESSAGE
 
 load_dotenv()
 
@@ -17,9 +18,18 @@ class ChatSession:
         self.messages: List[Dict[str, str]] = []
         self.system_message = {
             "role": "system",
-            "content": "You are a helpful AI assistant."
+            "content": SYSTEM_PROMPT
         }
         print(f"Initialized chat session with ID: {session_id}")
+
+    async def get_initial_message(self) -> Dict:
+        """
+        Get the initial welcome message for the chat session
+        """
+        return {
+            "role": "assistant",
+            "content": INITIAL_MESSAGE
+        }
 
     async def process_message(self, message: Dict) -> Dict:
         """
