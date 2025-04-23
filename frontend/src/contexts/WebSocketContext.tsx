@@ -40,20 +40,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const [messages, setMessages] = useState<Message[]>([]);
 
   const clearChat = () => {
-    // Clear messages
-    setMessages([]);
     // Clear session ID from localStorage
     localStorage.removeItem('chat_session_id');
-    // Generate new session ID
-    const newSessionId = uuidv4();
-    localStorage.setItem('chat_session_id', newSessionId);
-    setSessionId(newSessionId);
-    // Reconnect with new session ID
-    if (socket) {
-      socket.disconnect();
-      socket.auth = { session_id: newSessionId };
-      socket.connect();
-    }
+    // Refresh the page to trigger a new session
+    window.location.reload();
   };
 
   useEffect(() => {
