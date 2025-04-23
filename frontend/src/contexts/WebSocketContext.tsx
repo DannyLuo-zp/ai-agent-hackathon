@@ -19,6 +19,17 @@ interface Message {
   timestamp: Date;
 }
 
+interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface HistoryResponse {
+  status: string;
+  messages: HistoryMessage[];
+  session_id: string;
+}
+
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export const useWebSocket = () => {
@@ -107,9 +118,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     socketInstance.on('history', (data) => {
       console.log('Received history:', data);
       try {
-        const response = typeof data === 'string' ? JSON.parse(data) : data;
+        const response = typeof data === 'string' ? JSON.parse(data) : data as HistoryResponse;
         if (response.status === 'success' && Array.isArray(response.messages)) {
-          const formattedMessages = response.messages.map((msg: any) => ({
+          const formattedMessages = response.messages.map((msg: HistoryMessage) => ({
             id: uuidv4(),
             content: msg.content,
             sender: msg.role === 'user' ? 'user' : 'assistant',
