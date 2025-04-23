@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 const ChatInterface: React.FC = () => {
-  const { sendMessage, messages, isConnected } = useWebSocket();
+  const { sendMessage, messages, isConnected, clearChat } = useWebSocket();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,6 +30,12 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handleClearChat = () => {
+    if (window.confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
+      clearChat();
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-pink-50 to-purple-50">
       {/* Header */}
@@ -37,12 +44,25 @@ const ChatInterface: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         className="bg-white/80 backdrop-blur-sm shadow-sm p-4 sticky top-0 z-10"
       >
-        <div className="flex items-center justify-center space-x-2">
-          <Image src="/cat.png" alt="Cat" width={32} height={32} className="w-8 h-8" />
-          <h1 className="text-xl font-semibold text-center bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
-            Your AI Pet
-          </h1>
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Image src="/cat.png" alt="Cat" width={32} height={32} className="w-8 h-8" />
+            <h1 className="text-xl font-semibold text-center bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
+              Your AI Pet
+            </h1>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleClearChat}
+            className="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            title="Clear chat history"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </motion.button>
         </div>
       </motion.header>
 

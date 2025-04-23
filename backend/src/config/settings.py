@@ -21,6 +21,7 @@ SESSION_TIMEOUT_MINUTES = 30  # How long before an inactive session is cleaned u
 # WebSocket connection settings
 WS_PING_INTERVAL = 25  # Seconds between ping messages to keep connection alive
 WS_PING_TIMEOUT = 20   # Seconds to wait for pong response before closing connection
+SESSION_CLEANUP_INTERVAL = 60  # Seconds between cleanup runs
 
 # API versioning
 API_VERSION = "v1"

@@ -9,6 +9,7 @@ interface WebSocketContextType {
   sessionId: string;
   sendMessage: (message: string) => void;
   messages: Message[];
+  clearChat: () => void;
 }
 
 interface Message {
@@ -38,9 +39,33 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-  useEffect(() => {
-    // Generate a unique session ID
+  const clearChat = () => {
+    // Clear messages
+    setMessages([]);
+    // Clear session ID from localStorage
+    localStorage.removeItem('chat_session_id');
+    // Generate new session ID
     const newSessionId = uuidv4();
+    localStorage.setItem('chat_session_id', newSessionId);
+    setSessionId(newSessionId);
+    // Reconnect with new session ID
+    if (socket) {
+      socket.disconnect();
+      socket.auth = { session_id: newSessionId };
+      socket.connect();
+    }
+  };
+
+  useEffect(() => {
+    // Try to load session ID from localStorage first
+    const storedSessionId = localStorage.getItem('chat_session_id');
+    const newSessionId = storedSessionId || uuidv4();
+    
+    // If no stored session ID, save the new one
+    if (!storedSessionId) {
+      localStorage.setItem('chat_session_id', newSessionId);
+    }
+    
     setSessionId(newSessionId);
 
     // Connect to the WebSocket server
@@ -54,7 +79,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
     socketInstance.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to WebSocket server');
+      console.log('Connected to WebSocket server with session:', newSessionId);
+      
+      // Fetch chat history after connection
+      socketInstance.emit('fetch_history', { session_id: newSessionId });
     });
 
     socketInstance.on('disconnect', () => {
@@ -83,6 +111,24 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         }
       } catch (error) {
         console.error('Error parsing message:', error);
+      }
+    });
+
+    socketInstance.on('history', (data) => {
+      console.log('Received history:', data);
+      try {
+        const response = typeof data === 'string' ? JSON.parse(data) : data;
+        if (response.status === 'success' && Array.isArray(response.messages)) {
+          const formattedMessages = response.messages.map((msg: any) => ({
+            id: uuidv4(),
+            content: msg.content,
+            sender: msg.role === 'user' ? 'user' : 'assistant',
+            timestamp: new Date(),
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error('Error parsing history:', error);
       }
     });
 
@@ -125,6 +171,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         sessionId,
         sendMessage,
         messages,
+        clearChat,
       }}
     >
       {children}

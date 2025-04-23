@@ -1,83 +1,48 @@
-"""
-Session management service for handling chat sessions.
-"""
-import uuid
-from datetime import datetime, timedelta
-from typing import Dict, Optional
-from fastapi import WebSocket
+from datetime import datetime, timedelta, timezone
+from typing import Dict
 from src.services.chat_session import ChatSession
-from src.models.chat import ChatSession as ChatSessionModel
 from src.config.settings import SESSION_TIMEOUT_MINUTES
 
 class SessionManager:
     def __init__(self):
-        self.sessions: Dict[str, ChatSessionModel] = {}
-        self.active_connections: Dict[str, WebSocket] = {}
-        self.chat_sessions: Dict[str, ChatSession] = {}
+        self.sessions: Dict[str, ChatSession] = {} # session_id -> ChatSession
 
-    async def create_session(self, user_id: str) -> ChatSessionModel:
-        """Create a new chat session."""
-        session_id = str(uuid.uuid4())
-        session = ChatSessionModel(
-            session_id=session_id,
-            user_id=user_id,
-            messages=[],
-            created_at=datetime.utcnow(),
-            last_activity=datetime.utcnow(),
-            is_active=True
-        )
-        self.sessions[session_id] = session
-        self.chat_sessions[session_id] = ChatSession(session_id)
-        return session
+    def connect(self, session_id: str, socket_id: str) -> ChatSession:
+        """Create a new chat session if it doesn't exist.
+        If it does, update the socket_id.
+        """
+        if session_id not in self.sessions:
+            self.sessions[session_id] = ChatSession(session_id, socket_id)
+        else:
+            self.sessions[session_id].socket_id = socket_id
 
-    async def send_initial_message(self, session_id: str):
-        """Send the initial welcome message through WebSocket."""
-        if websocket := self.active_connections.get(session_id):
-            chat_session = self.chat_sessions.get(session_id)
-            if chat_session:
-                initial_message = await chat_session.get_initial_message()
-                await websocket.send_json({
-                    "type": "message",
-                    "data": {
-                        "id": str(uuid.uuid4()),
-                        "role": initial_message["role"],
-                        "content": initial_message["content"],
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
-                })
+        return self.sessions[session_id]
 
-    async def process_message(self, session_id: str, content: str) -> Optional[Dict]:
-        """Process a message using the ChatSession."""
-        chat_session = self.chat_sessions.get(session_id)
-        if chat_session:
-            return await chat_session.process_message({"content": content})
-        return None
+    def disconnect(self, socket_id: str):
+        """Disconnect a socket from a session."""
+        for session_id, session in self.sessions.items():
+            if session.socket_id == socket_id:
+                session.socket_id = None  # Clear the socket_id but keep the session
+                session.last_active = datetime.now(timezone.utc)
+                print(f"Marked session {session_id} as disconnected (socket {socket_id})")
+                break
 
-    def get_session(self, session_id: str) -> Optional[ChatSessionModel]:
-        """Get a session by ID."""
+    def get_session(self, session_id: str) -> ChatSession:
+        """Get a session by session_id."""
         return self.sessions.get(session_id)
 
-    async def connect(self, websocket: WebSocket, session_id: str):
-        """Connect a WebSocket to a session."""
-        await websocket.accept()
-        self.active_connections[session_id] = websocket
-
-    def disconnect(self, session_id: str):
-        """Disconnect a WebSocket from a session."""
-        self.active_connections.pop(session_id, None)
-        self.chat_sessions.pop(session_id, None)
-
-    async def send_message(self, session_id: str, message: dict):
-        """Send a message through the WebSocket connection."""
-        if websocket := self.active_connections.get(session_id):
-            await websocket.send_json(message)
+    def delete_session(self, session_id: str):
+        """Delete a chat session."""
+        if session_id in self.sessions:
+            del self.sessions[session_id]
 
     def cleanup_inactive_sessions(self):
         """Clean up sessions that have been inactive for too long."""
-        now = datetime.utcnow()
+        print("Cleaning up inactive sessions ... ")
+        now = datetime.now(timezone.utc)
         timeout = timedelta(minutes=SESSION_TIMEOUT_MINUTES)
         
         for session_id, session in list(self.sessions.items()):
-            if now - session.last_activity > timeout:
-                self.disconnect(session_id)
-                session.is_active = False 
+            if not session.socket_id and now - session.last_active > timeout:
+                print(f"Deleting session {session_id} because it has been inactive for too long")
+                self.delete_session(session_id)

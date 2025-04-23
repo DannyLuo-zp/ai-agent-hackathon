@@ -1,16 +1,47 @@
 """
 Main FastAPI application module.
 """
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, List
 import json
 import socketio
 from src.services.session_manager import SessionManager
-from src.services.chat_session import ChatSession
+import asyncio
+from contextlib import asynccontextmanager
+from src.config.settings import WS_PING_INTERVAL, WS_PING_TIMEOUT, SESSION_CLEANUP_INTERVAL
+
+
+# Initialize session manager
+session_manager = SessionManager()
+
+async def periodic_cleanup():
+    """Periodically clean up inactive sessions."""
+    try:
+        while True:
+            # run blocking cleanup in a thread so we don't block the loop
+            await asyncio.to_thread(session_manager.cleanup_inactive_sessions)
+            await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+    except asyncio.CancelledError:
+        # graceful exit on shutdown
+        pass
+    except Exception as e:
+        print(f"Error during session cleanup: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: launch background task
+    app.state.cleanup_task = asyncio.create_task(periodic_cleanup())
+    yield
+    # shutdown: cancel and await it
+    task = app.state.cleanup_task
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 # Create FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Define allowed origins
 ALLOWED_ORIGINS = [
@@ -24,7 +55,9 @@ sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins=ALLOWED_ORIGINS,  # Allow both local and production origins
     logger=True,
-    engineio_logger=True
+    engineio_logger=True,
+    ping_timeout=WS_PING_TIMEOUT,
+    ping_interval=WS_PING_INTERVAL
 )
 
 # Create Socket.IO app
@@ -39,33 +72,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize session manager
-session_manager = SessionManager()
 
 # Socket.IO event handlers
 @sio.event
 async def connect(sid, environ, auth):
-    print(f"Client connected: {sid}")
-    
-    # Get session_id from auth parameter
-    session_id = auth.get('session_id') if auth else None
-    
-    # If not found in auth, use the socket ID
-    if not session_id:
-        session_id = sid
-    
-    # Create a chat session for this connection
-    session_manager.chat_sessions[session_id] = ChatSession(session_id)
-    print(f"Created chat session for {session_id}")
+    print("Handshake Origin:", environ.get("HTTP_ORIGIN"))
+    session_id = (auth.get('session_id') if auth else None) or sid
+    session_manager.connect(session_id, sid)
 
 @sio.event
 async def disconnect(sid):
-    print(f"Client disconnected: {sid}")
-    # Find and remove the session
-    for session_id, session in list(session_manager.chat_sessions.items()):
-        if session.session_id == sid:
-            del session_manager.chat_sessions[session_id]
-            break
+    session_manager.disconnect(sid)
+
 
 @sio.event
 async def message(sid, data):
@@ -75,16 +93,10 @@ async def message(sid, data):
         message_data = json.loads(data) if isinstance(data, str) else data
         
         # Get the session_id from the message data
-        session_id = message_data.get('session_id')
-        if not session_id:
-            # If no session_id in message, try to find it from the sid
-            for s_id, session in session_manager.chat_sessions.items():
-                if session.session_id == sid:
-                    session_id = s_id
-                    break
+        session_id = message_data.get('session_id') or sid
         
         # Get the chat session
-        chat_session = session_manager.chat_sessions.get(session_id)
+        chat_session = session_manager.get_session(session_id)
         
         if chat_session:
             # Process the message
@@ -96,14 +108,43 @@ async def message(sid, data):
             await sio.emit('message', json.dumps({
                 "status": "error",
                 "content": "Session not found",
-                "session_id": sid
+                "session_id": session_id
             }), room=sid)
+
     except Exception as e:
         print(f"Error processing message: {str(e)}")
         await sio.emit('message', json.dumps({
             "status": "error",
             "content": str(e),
-            "session_id": sid
+            "session_id": session_id
+        }), room=sid)
+
+@sio.event
+async def fetch_history(sid, data):
+    """Fetch chat history for a session"""
+    try:
+        session_id = data.get('session_id') or sid
+        chat_session = session_manager.get_session(session_id)
+        
+        if chat_session:
+            history = chat_session.get_chat_history()
+            await sio.emit('history', json.dumps({
+                "status": "success",
+                "messages": history,
+                "session_id": session_id
+            }), room=sid)
+        else:
+            await sio.emit('history', json.dumps({
+                "status": "error",
+                "content": "Session not found",
+                "session_id": session_id
+            }), room=sid)
+    except Exception as e:
+        print(f"Error fetching history: {str(e)}")
+        await sio.emit('history', json.dumps({
+            "status": "error",
+            "content": str(e),
+            "session_id": session_id
         }), room=sid)
 
 @app.get("/")

@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional
-import json
+from typing import Dict, List
+from datetime import datetime, timezone
+
 from openai import AsyncOpenAI
 import os
 from dotenv import load_dotenv
@@ -8,8 +9,11 @@ from src.config.settings import SYSTEM_PROMPT, INITIAL_MESSAGE
 load_dotenv()
 
 class ChatSession:
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, socket_id: str):
         self.session_id = session_id
+        self.socket_id = socket_id  # store the socket id, indicates the connection is active
+        self.last_active = datetime.now(timezone.utc) 
+        
         # Initialize OpenAI client with just the API key
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -89,4 +93,10 @@ class ChatSession:
         """
         Clear the conversation history
         """
-        self.messages = [] 
+        self.messages = []
+
+    def get_chat_history(self) -> List[Dict[str, str]]:
+        """
+        Get the conversation history
+        """
+        return self.messages 
