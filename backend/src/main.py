@@ -3,23 +3,24 @@ Main FastAPI application module.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import json
 import socketio
-from src.services.session_manager import SessionManager
 import asyncio
 from contextlib import asynccontextmanager
+from src.services.chat_session_manager import ChatSessionManager
+from src.services.rt_session_manager import RTSessionManager
 from src.config.settings import WS_PING_INTERVAL, WS_PING_TIMEOUT, SESSION_CLEANUP_INTERVAL
-
+from src.namespaces.chat import register_chat_handlers
+from src.namespaces.realtime import register_realtime_handlers
 
 # Initialize session manager
-session_manager = SessionManager()
+chat_session_manager = ChatSessionManager()
 
 async def periodic_cleanup():
     """Periodically clean up inactive sessions."""
     try:
         while True:
             # run blocking cleanup in a thread so we don't block the loop
-            await asyncio.to_thread(session_manager.cleanup_inactive_sessions)
+            await asyncio.to_thread(chat_session_manager.cleanup_inactive_sessions)
             await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
     except asyncio.CancelledError:
         # graceful exit on shutdown
@@ -72,80 +73,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Socket.IO event handlers
-@sio.event
-async def connect(sid, environ, auth):
-    print("Handshake Origin:", environ.get("HTTP_ORIGIN"))
-    session_id = (auth.get('session_id') if auth else None) or sid
-    session_manager.connect(session_id, sid)
-
-@sio.event
-async def disconnect(sid):
-    session_manager.disconnect(sid)
-
-
-@sio.event
-async def message(sid, data):
-    print(f"Received message from {sid}: {data}")
-    try:
-        # Parse the message data
-        message_data = json.loads(data) if isinstance(data, str) else data
-        
-        # Get the session_id from the message data
-        session_id = message_data.get('session_id') or sid
-        
-        # Get the chat session
-        chat_session = session_manager.get_session(session_id)
-        
-        if chat_session:
-            # Process the message
-            response = await chat_session.process_message(message_data)
-            # Send the response back to the client
-            await sio.emit('message', json.dumps(response), room=sid)
-        else:
-            print(f"Session not found for sid: {sid}, session_id: {session_id}")
-            await sio.emit('message', json.dumps({
-                "status": "error",
-                "content": "Session not found",
-                "session_id": session_id
-            }), room=sid)
-
-    except Exception as e:
-        print(f"Error processing message: {str(e)}")
-        await sio.emit('message', json.dumps({
-            "status": "error",
-            "content": str(e),
-            "session_id": session_id
-        }), room=sid)
-
-@sio.event
-async def fetch_history(sid, data):
-    """Fetch chat history for a session"""
-    try:
-        session_id = data.get('session_id') or sid
-        chat_session = session_manager.get_session(session_id)
-        
-        if chat_session:
-            history = chat_session.get_chat_history()
-            await sio.emit('history', json.dumps({
-                "status": "success",
-                "messages": history,
-                "session_id": session_id
-            }), room=sid)
-        else:
-            await sio.emit('history', json.dumps({
-                "status": "error",
-                "content": "Session not found",
-                "session_id": session_id
-            }), room=sid)
-    except Exception as e:
-        print(f"Error fetching history: {str(e)}")
-        await sio.emit('history', json.dumps({
-            "status": "error",
-            "content": str(e),
-            "session_id": session_id
-        }), room=sid)
+# Register chat namespace handlers
+register_chat_handlers(sio, chat_session_manager)
+# Register realtime namespace handlers
+rt_session_manager = RTSessionManager(sio)
+register_realtime_handlers(sio, rt_session_manager)
 
 @app.get("/")
 async def root():

@@ -32,7 +32,9 @@ export default function RootLayout({
         <link rel="icon" href="/cat.png" type="image/png" />
         <link rel="apple-touch-icon" href="/cat.png" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+      </body>
     </html>
   );
 }

@@ -3,7 +3,7 @@ from typing import Dict
 from src.services.chat_session import ChatSession
 from src.config.settings import SESSION_TIMEOUT_MINUTES
 
-class SessionManager:
+class ChatSessionManager:
     def __init__(self):
         self.sessions: Dict[str, ChatSession] = {} # session_id -> ChatSession
 

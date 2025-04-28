@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 interface MessageProps {
   content: string;
-  sender: 'user' | 'assistant';
+  sender: 'user' | 'assistant' | 'system';
   timestamp: Date;
 }
 

@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
       test: /\.(png|jpg|gif|svg)$/i,
       type: 'asset/resource'
     });
+    config.module.rules.push({
+      test: /\.js$/,
+      include: /audioWorklet/,
+      type: 'asset/resource',
+    });
     return config;
   }
 };
