@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 import aiohttp
 from openai import AsyncOpenAI
 from socketio import AsyncServer
+from ..config.settings import SYSTEM_PROMPT
 
 RT_NS = "/realtime"
 
@@ -17,12 +18,13 @@ class RTSession:
         sio: AsyncServer,
         session_id: str,
         socket_id: str,
-        voice_choice: Optional[str] = None
+        voice_choice: Optional[str] = "alloy"  # Default to alloy voice
     ):
         self.sio = sio
         self.session_id = session_id
         self.socket_id = socket_id
         self.voice_choice = voice_choice
+        self.system_prompt = SYSTEM_PROMPT
 
         # queue of messages from socket.io → OpenAI
         self._to_server = asyncio.Queue()
@@ -61,6 +63,16 @@ class RTSession:
                 async with session.ws_connect(url, headers=headers) as openai_ws:
                     print(f"[DEBUG] Successfully connected to OpenAI RT for session {self.session_id}")
                     logger.info(f"[OpenAI RT] Successfully connected to realtime endpoint for session {self.session_id}")
+                    
+                    # Send system prompt if provided
+                    if self.system_prompt:
+                        system_message = {
+                            "type": "session.update",
+                            "session": {
+                                "instructions": self.system_prompt
+                            }
+                        }
+                        await openai_ws.send_str(json.dumps(system_message))
                     
                     async def client_to_openai():
                         while not self._shutdown.is_set():
